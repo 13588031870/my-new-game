@@ -2,387 +2,450 @@ import streamlit as st
 import random
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 import time
 
 # ==========================================
-# 1. 3A级 UI 暴力注入 (CSS Override)
+# 1. 游戏级 UI 引擎 (CSS Engine)
 # ==========================================
-st.set_page_config(layout="wide", page_title="AI Infinite Simulator", initial_sidebar_state="expanded")
+st.set_page_config(layout="wide", page_title="AI Infinite Simulator", initial_sidebar_state="collapsed")
 
-# 引入 Google Noto Sans 字体，消灭宋体
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;700;900&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap');
     
-    /* ---------------- 全局设置 ---------------- */
-    html, body, [class*="css"] {
-        font-family: 'Noto Sans SC', sans-serif !important;
-    }
-    
-    /* 背景：深空渐变流光 */
+    /* ---------------- 全局重置 ---------------- */
     .stApp {
-        background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
-        background-attachment: fixed;
+        background: radial-gradient(circle at center, #1b2735 0%, #090a0f 100%);
+        font-family: 'Noto Sans SC', sans-serif !important;
+        color: #e0e6ed;
     }
-
-    /* ---------------- 标题与排版 ---------------- */
-    h1 {
-        font-weight: 900 !important;
-        font-size: 3.5rem !important;
-        background: -webkit-linear-gradient(eee, #333);
-        background: linear-gradient(to right, #00c6ff, #0072ff);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        text-shadow: 0px 0px 20px rgba(0, 198, 255, 0.3);
-        margin-bottom: 30px !important;
-    }
-    h2 {
-        color: #ffffff !important;
-        border-left: 5px solid #00c6ff;
-        padding-left: 15px;
-        margin-top: 30px !important;
-        font-size: 1.8rem !important;
-    }
-    h3 {
-        color: #e0e0e0 !important;
-        font-weight: 700 !important;
-    }
-    p, label, li {
-        color: #b0b0b0 !important;
-        font-size: 1.05rem !important;
-        line-height: 1.6 !important;
-    }
-
-    /* ---------------- 玻璃拟态卡片容器 ---------------- */
-    .glass-card {
-        background: rgba(255, 255, 255, 0.05);
+    
+    /* ---------------- 导航栏 ---------------- */
+    .nav-bar {
+        display: flex;
+        align-items: center;
+        background: rgba(0, 0, 0, 0.4);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 10px 20px;
+        margin: -60px -20px 20px -20px; /* 抵消 streamlit 默认 padding */
         backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 16px;
-        padding: 25px;
-        margin-bottom: 20px;
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-        transition: transform 0.3s ease;
     }
-    .glass-card:hover {
-        transform: translateY(-5px);
-        border-color: rgba(255, 255, 255, 0.3);
+    
+    /* ---------------- 高密度 HUD 卡片 ---------------- */
+    .hud-card {
+        background: rgba(30, 35, 45, 0.6);
+        border: 1px solid rgba(100, 200, 255, 0.15);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        border-radius: 4px; /* 硬朗的游戏风格 */
+        padding: 15px;
+        margin-bottom: 15px;
+        position: relative;
+        overflow: hidden;
     }
-
-    /* ---------------- 按钮美化 (重写 Streamlit 按钮) ---------------- */
+    .hud-card::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; width: 4px; height: 100%;
+        background: #00c6ff;
+    }
+    
+    /* ---------------- 标题与排版 ---------------- */
+    .hud-title {
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        color: #5d6d7e;
+        margin-bottom: 10px;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+        padding-bottom: 5px;
+    }
+    .big-stat {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #00c6ff;
+        text-shadow: 0 0 10px rgba(0, 198, 255, 0.5);
+    }
+    
+    /* ---------------- 按钮系统 ---------------- */
     div.stButton > button {
-        background: linear-gradient(145deg, #1e1e2f, #252535);
-        color: #ffffff;
-        border: 1px solid rgba(255,255,255,0.1);
-        border-radius: 10px;
-        padding: 15px 20px;
-        font-size: 1.1rem;
+        background: linear-gradient(180deg, #2b3a4a 0%, #1a2530 100%);
+        border: 1px solid #4a5b6c;
+        color: #a0b0c0;
+        border-radius: 2px;
         font-weight: 600;
-        box-shadow: 5px 5px 10px #0b0b10, -5px -5px 10px #2b2b3d;
-        transition: all 0.3s ease;
+        transition: all 0.2s;
+        text-transform: uppercase;
+        letter-spacing: 1px;
     }
     div.stButton > button:hover {
-        background: linear-gradient(145deg, #00c6ff, #0072ff);
-        color: white;
-        box-shadow: 0 0 15px rgba(0, 198, 255, 0.6);
-        border-color: transparent;
-        transform: scale(1.02);
+        background: #00c6ff;
+        color: #090a0f;
+        border-color: #00eaff;
+        box-shadow: 0 0 15px rgba(0, 198, 255, 0.4);
     }
     
-    /* ---------------- 输入框美化 ---------------- */
-    .stTextInput > div > div > input, .stTextArea > div > div > textarea {
-        background-color: rgba(0, 0, 0, 0.3) !important;
-        color: white !important;
-        border: 1px solid rgba(255, 255, 255, 0.2) !important;
-        border-radius: 8px !important;
-    }
-    
-    /* ---------------- 特质标签与 Tooltip ---------------- */
-    .trait-badge {
+    /* ---------------- 特质标签 ---------------- */
+    .trait-box {
+        background: rgba(0,0,0,0.3);
+        border: 1px solid #333;
+        padding: 5px 10px;
+        margin: 3px;
         display: inline-block;
-        background: rgba(0, 198, 255, 0.2);
-        color: #00c6ff;
-        border: 1px solid rgba(0, 198, 255, 0.5);
-        padding: 5px 12px;
-        border-radius: 20px;
-        margin: 5px;
-        font-size: 0.9rem;
+        font-size: 0.85rem;
+        color: #ffd700;
         cursor: help;
-        position: relative;
     }
-    /* Tooltip 实现 */
-    .trait-badge:hover::after {
-        content: attr(data-desc);
-        position: absolute;
-        bottom: 120%;
-        left: 50%;
-        transform: translateX(-50%);
-        background-color: #000;
-        color: #fff;
-        padding: 8px 12px;
-        border-radius: 6px;
-        font-size: 0.8rem;
-        white-space: pre-wrap;
-        width: 200px;
-        z-index: 999;
-        box-shadow: 0 0 10px rgba(255,255,255,0.2);
+    .trait-box:hover {
+        background: #ffd700;
+        color: #000;
     }
     
-    /* ---------------- 侧边栏优化 ---------------- */
-    section[data-testid="stSidebar"] {
-        background-color: #0b0b13;
+    /* ---------------- NPC 条目 ---------------- */
+    .npc-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: rgba(255,255,255,0.03);
+        padding: 8px;
+        margin-bottom: 5px;
+        border-left: 2px solid #555;
     }
     
-    /* ---------------- 进度条颜色 ---------------- */
-    .stProgress > div > div > div > div {
-        background-image: linear-gradient(to right, #00b09b, #96c93d);
+    /* ---------------- 推荐人物卡片 (Selectable) ---------------- */
+    .preset-btn-container {
+        border: 1px solid #333; 
+        padding: 10px; 
+        background: rgba(0,0,0,0.2);
+        transition: 0.3s;
     }
+    .preset-btn-container:hover {
+        border-color: #00c6ff;
+    }
+
 </style>
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. 深度扩充的数据集 (文案扩写)
+# 2. 过程生成引擎 (Procedural Generation Engine)
 # ==========================================
 
+# 词库：用于伪装 AI 生成推荐人物
+NAME_DB = {
+    "三国": ["赵", "钱", "孙", "李", "诸葛", "司马", "夏侯", "关", "张"],
+    "现代": ["王", "陈", "林", "周", "徐", "马", "张", "刘"],
+    "修仙": ["叶", "萧", "林", "方", "韩", "白", "楚", "秦"],
+    "末日": ["杰克", "罗根", "莎拉", "艾达", "里昂", "瑞克", "达里尔"]
+}
+TITLE_DB = {
+    "三国": ["猛将", "谋士", "刺客", "隐士", "校尉", "义士"],
+    "现代": ["卷王", "投资人", "黑客", "外卖员", "高管", "UP主"],
+    "修仙": ["废柴", "圣女", "魔修", "散修", "丹师", "剑痴"],
+    "末日": ["特种兵", "医生", "流浪者", "拾荒者", "机械师", "猎人"]
+}
+
+def generate_dynamic_presets(scenario_type):
+    """根据剧本类型，动态生成 5 个推荐人物"""
+    presets = []
+    names = NAME_DB.get(scenario_type, ["未", "知"])
+    titles = TITLE_DB.get(scenario_type, ["行者"])
+    
+    for _ in range(5):
+        n = random.choice(names) + (chr(random.randint(0x4e00, 0x9fa5)) if scenario_type != "末日" else "")
+        role = random.choice(titles)
+        # 简单的随机简介生成
+        bios = [
+            f"一个试图改变命运的{role}。",
+            f"怀揣着秘密的{role}，眼神坚毅。",
+            f"在这个时代显得格格不入的{role}。",
+            f"拥有惊人天赋的{role}，但性格古怪。"
+        ]
+        presets.append({
+            "name": n,
+            "role": role,
+            "bio": random.choice(bios)
+        })
+    return presets
+
+# 剧本数据 (更新后)
 SCENARIOS = {
     "三国": [
-        {"id": "s_1", "name": "公元189年：至暗时刻", "desc": "汉灵帝驾崩，洛阳城血流成河。西凉军阀董卓带甲进京，废少帝，杀太后，夜宿龙床。此时曹操还是个校尉，刘备还在编草鞋。你是选择依附国贼，还是手持七星宝刀，做那个刺破黑暗的孤勇者？"},
-        {"id": "s_2", "name": "公元194年：群雄割据", "desc": "董卓已死，但天下更乱了。袁绍据河北，公孙瓒霸辽东，袁术在淮南做着皇帝梦，孙策用玉玺换来了三千兵马横扫江东。这是野心家的乐园，只要你有兵有粮，草头王也能问鼎九五。"},
-        {"id": "s_3", "name": "公元200年：官渡惊雷", "desc": "北方双雄的宿命对决。袁绍七十万大军南下，曹操只有七万。这是一场关于后勤、人心与奇谋的豪赌。若你身在袁营，能否识破许攸的背叛？若在曹营，敢不敢夜袭乌巢，一把火烧出个新时代？"},
-        {"id": "s_4", "name": "公元208年：赤壁烽火", "desc": "曹操挥师八十万南下，意图饮马长江。孙刘两家在绝望中结盟。这一年的冬天，东南风起，铁索连舟。你是那个在此刻借东风的妖道，还是那个在华容道放走曹操的义士？"},
-        {"id": "s_5", "name": "公元234年：秋风五丈原", "desc": "“出师未捷身先死，长使英雄泪满襟。”蜀汉丞相第六次北伐，身体已至极限。司马懿坚守不出，长明灯在秋风中摇曳。如果你能逆天改命，能否让那颗将星不再陨落？"}
+        {"id": "s1", "name": "公元189年 · 董卓入京", "desc": "汉室倾颓，魔王降临洛阳。"},
+        {"id": "s2", "name": "公元194年 · 群雄逐鹿", "desc": "旧秩序崩塌，诸侯割据一方。"},
+        {"id": "s3", "name": "公元200年 · 官渡之战", "desc": "北方双雄的宿命对决。"},
+        {"id": "s4", "name": "公元208年 · 赤壁鏖兵", "desc": "烈火张天，天下三分。"},
+        {"id": "s5", "name": "公元234年 · 星落五丈原", "desc": "丞相的最后一次北伐。"}
     ],
     "现代": [
-        {"id": "m_1", "name": "2008年：激荡三十年", "desc": "这是一个大悲大喜的年份。年初的雪灾，五月的国殇，八月的奥运盛典，九月的金融海啸。股市从6124点狂泻至1664点，房价却在悄然蓄力。此时入局，是抄底的良机，还是被资本吞噬的开始？"},
-        {"id": "m_2", "name": "2015年：流量帝国", "desc": "4G网络全面铺开，移动互联网进入下半场。短视频应用刚刚上线，直播千播大战打响，O2O烧钱如流水。这是草根逆袭最容易的时代，只要你敢在镜头前豁出去，十五秒就能名扬天下。"},
-        {"id": "m_3", "name": "2020年：静默世界", "desc": "突如其来的大流行让世界按下了暂停键。口罩成了硬通货，熔断成了关键词。在居家隔离的日子里，有人破产跳楼，有人靠社区团购日入斗金。在巨大的不确定性中，如何守住本心？"},
-        {"id": "m_4", "name": "2026年：当下·围城", "desc": "【硬核模式】经济进入存量博弈。考公报录比达到千分之一，大厂裁员成为常态，35岁危机提前到30岁。这不是爽文，这是关于房贷、育儿、养老和职场PUA的真实生存游戏。"},
-        {"id": "m_5", "name": "2060年：奇点降临", "desc": "仿生人技术彻底成熟。你的邻居、同事、甚至伴侣都可能是AI。由于《图灵法案》的废除，人类与仿生人的界限模糊不清。你买了一个叫“伊芙”的旧型号仿生人，发现她似乎在写日记..."}
+        {"id": "m1", "name": "2008 · 激荡三十年", "desc": "机遇与危机并存的黄金时代。"},
+        {"id": "m2", "name": "2015 · 流量帝国", "desc": "每个人都能成名的15分钟。"},
+        {"id": "m3", "name": "2020 · 静默世界", "desc": "大流行背景下的生存挑战。"},
+        {"id": "m4", "name": "2026 · 当下·围城", "desc": "极致内卷的现实主义生存。"},
+        {"id": "m5", "name": "2060 · 奇点降临", "desc": "仿生人与人类的界限消失。"}
     ],
     "修仙": [
-        {"id": "x_1", "name": "合欢宗：红尘炼心", "desc": "作为合欢宗弟子，你不需要闭关苦修，你需要的是魅力与情商。在这正魔对立的世界，你需要让正道圣女为你动凡心，让魔道妖女为你挡天劫。记住，动情是修行的开始，也是陨落的先兆。"},
-        {"id": "x_2", "name": "荒古圣体：举世皆敌", "desc": "你是天选之子，肉身无双。但天道不容，每一次进阶都需要消耗千万倍的资源，且会引来天罚。大成之日可战大帝，但在那之前，你就是所有人眼中的“人形神药”。"},
-        {"id": "x_3", "name": "戒灵：随身老爷爷", "desc": "你本是家族弃子，被未婚妻当众退婚。绝望之际，戒指里飘出一个灵魂：“小娃娃，想变强吗？”从此，你背负着复活他的使命，走上了一条丹武双修的逆袭之路。"},
-        {"id": "x_4", "name": "夺舍：魔尊归来", "desc": "千年前你是令人闻风丧胆的魔尊，渡劫失败后，夺舍了一个正道门派的杂役弟子。你拥有顶级的功法记忆，但身体孱弱如鸡。你必须在正道大佬的眼皮底下，猥琐发育，扮猪吃老虎。"}
+        {"id": "x1", "name": "合欢宗 · 魅影", "desc": "以情入道，游走正魔之间。"},
+        {"id": "x2", "name": "荒古圣体 · 霸途", "desc": "举世皆敌的无敌之路。"},
+        {"id": "x3", "name": "戒指老爷爷 · 博弈", "desc": "废柴逆袭，药老相助。"},
+        {"id": "x4", "name": "夺舍 · 魔尊归来", "desc": "满级账号重练新手村。"}
     ],
     "末日": [
-        {"id": "d_1", "name": "尸潮：黑暗七十二小时", "desc": "T病毒泄露后的第三天，秩序彻底崩塌。电力中断，水源污染。昔日的邻居正在撞击你的房门。你手里只有一把消防斧和半瓶水。是固守待援，还是杀出一条血路去寻找避难所？"},
-        {"id": "d_2", "name": "核冬：辐射废土", "desc": "2030年，核按钮被按下了。蘑菇云散去后，世界只剩下灰烬。这里没有法律，只有口径。你需要搜集盖格计数器、碘片，并小心那些比辐射更致命的掠夺者军团。"},
-        {"id": "d_3", "name": "智械：钢铁洪流", "desc": "2090年，超级AI“天网”判定人类为有害生物。全球机械军团倒戈。作为幸存的人类反抗军，你要在废墟中与T-800型终结者周旋，寻找关闭主机的一线生机。"}
+        {"id": "d1", "name": "尸潮爆发 · 生化", "desc": "秩序崩塌的最初72小时。"},
+        {"id": "d2", "name": "核云之下 · 战争", "desc": "2030三战，硬核军事生存。"},
+        {"id": "d3", "name": "智械危机 · 2090", "desc": "天网觉醒，人类的反击。"}
     ]
 }
 
-# 预设人物扩充
-PRESETS = {
-    "三国": [
-        {"name": "吕布", "bio": "九原虓虎，方天画戟。只要不认义父，我就是天下第一。", "style": "武力天花板"},
-        {"name": "诸葛亮", "bio": "卧龙岗上散淡人。精通奇门遁甲，等待明主三顾。", "style": "智力天花板"},
-        {"name": "曹操", "bio": "宁教我负天下人，休教天下人负我。乱世之奸雄。", "style": "全能霸主"},
-        {"name": "刘备", "bio": "织席贩履之徒，但我有两个万夫不当的兄弟。", "style": "魅力天花板"}
-    ],
-    "现代": [
-        {"name": "高启强", "bio": "原本是旧厂街卖鱼的，因为爱看《孙子兵法》而一步步做大。", "style": "黑白通吃"},
-        {"name": "马斯克", "bio": "硅谷钢铁侠，目标是星辰大海。我要在火星退休。", "style": "科技狂人"},
-        {"name": "房产中介", "bio": "手里握着几十套房源，在这个泡沫时代，我比谁都懂人性。", "style": "信息差"},
-        {"name": "内卷之王", "bio": "从小就是第一名，清北毕业，大厂P8。但我感觉不到快乐。", "style": "高智商低SAN"}
-    ],
-    "修仙": [
-        {"name": "韩立", "bio": "相貌平平，皮肤黝黑。遇到危险跑得最快，杀人必毁尸灭迹。", "style": "苟道至尊"},
-        {"name": "萧炎", "bio": "莫欺少年穷！三十年河东，三十年河西！", "style": "热血逆袭"},
-        {"name": "方源", "bio": "为了永生，任何代价都可以付出。早岁哪知世事艰...", "style": "极致利己"},
-        {"name": "白小纯", "bio": "我最怕死了，所以我一定要修成不死之身。", "style": "长生流"}
-    ],
-    "末日": [
-        {"name": "艾丽丝", "bio": "安布雷拉前安保主管，体内融合了T病毒，拥有超常体能。", "style": "生化战神"},
-        {"name": "乔尔", "bio": "在这个残酷的世界失去了女儿，现在是个冷血的走私客。", "style": "生存专家"},
-        {"name": "瑞克", "bio": "前警长，哪怕世界末日，我也想建立一个新的秩序。", "style": "领袖气质"},
-        {"name": "独行者", "bio": "一人一狗，一把狙击枪。我不相信任何人。", "style": "孤狼"}
-    ]
-}
-
-# 模拟 AI 生成 (增加特质描述)
+# 核心 AI 模拟器 (Mock)
 def mock_ai_generator(name, age, bio, scenario):
-    time.sleep(1.5)
+    time.sleep(1.2) # 模拟计算延迟
     
-    # 模拟特质数据库 (带描述)
-    trait_db = {
-        "三国": {"乱世奸雄": "政治判定+20", "无双": "战斗胜利+30%", "仁德": "NPC好感获取翻倍", "短视": "智力判定-10"},
-        "现代": {"卷王": "精力消耗-1", "富二代": "初始金钱x10", "社恐": "人际判定-20", "乐天派": "SAN值不易下降"},
-        "修仙": {"天灵根": "修炼速度+100%", "桃花劫": "易触发情缘事件", "丹毒": "生命上限-10%", "剑心": "攻击力+20%"},
-        "末日": {"神射手": "远程命中+30%", "囤积癖": "物资获取+20%", "PTSD": "SAN值消耗翻倍", "铁胃": "吃变质食物不扣血"}
-    }
-    
-    # 根据剧本选取
-    s_traits = trait_db.get(scenario, {"通用": "无"})
-    selected_keys = random.sample(list(s_traits.keys()), 3)
-    
-    final_traits = [{ "name": k, "desc": s_traits[k] } for k in selected_keys]
-    
-    dims = []
-    if scenario == "三国": dims = ["统率", "武力", "智力", "政治", "魅力"]
-    elif scenario == "现代": dims = ["智商", "情商", "体质", "资产", "快乐"]
-    elif scenario == "修仙": dims = ["根骨", "悟性", "福源", "神识", "灵力"]
-    else: dims = ["战术", "射击", "体质", "理智", "领导"]
+    # 属性生成逻辑
+    if scenario == "三国":
+        stats = {"统率": random.randint(50,95), "武力": random.randint(40,99), "智力": random.randint(40,95), "政治": random.randint(30,85), "魅力": random.randint(50,90)}
+        npcs = [
+            {"name": "曹操", "role": "枭雄", "rel": -10, "desc": "对你心存疑虑"},
+            {"name": "刘备", "role": "皇叔", "rel": 20, "desc": "觉得你相貌不凡"}
+        ]
+    elif scenario == "现代":
+        stats = {"智商": random.randint(80,140), "情商": random.randint(60,100), "体质": random.randint(50,90), "资产": random.randint(10,100), "心情": 80}
+        npcs = [
+            {"name": "HR经理", "role": "面试官", "rel": 0, "desc": "正在审视你的简历"},
+            {"name": "房东", "role": "债主", "rel": -5, "desc": "准备涨房租"}
+        ]
+    elif scenario == "修仙":
+        stats = {"根骨": random.randint(20,90), "悟性": random.randint(40,100), "福源": random.randint(10,100), "神识": random.randint(30,80), "灵力": 0}
+        npcs = [
+            {"name": "神秘师姐", "role": "宗门天骄", "rel": 50, "desc": "暗中关注你"},
+            {"name": "外门执事", "role": "小反派", "rel": -40, "desc": "想抢你的玉佩"}
+        ]
+    else: # 末日
+        stats = {"战术": random.randint(50,95), "射击": random.randint(60,100), "体质": random.randint(60,90), "理智": 70, "领导": random.randint(20,80)}
+        npcs = [
+            {"name": "老兵", "role": "幸存者", "rel": 30, "desc": "欣赏你的眼神"},
+            {"name": "掠夺者首领", "role": "敌对势力", "rel": -100, "desc": "悬赏你的人头"}
+        ]
+
+    # 特质生成 (带详细描述)
+    traits = [
+        {"name": "天命之人", "desc": "关键时刻运气爆发，全属性判定+5"},
+        {"name": "异类", "desc": "初始人际关系-20，但特殊事件触发率提升"},
+        {"name": "坚毅", "desc": "San值/心情 消耗减半"}
+    ]
 
     return {
-        "polished_bio": f"【天道推演】\n{name}，骨龄{age}。{bio}\n此子命格奇特，入局之时，风云变色...",
-        "stats": {k: random.randint(40, 95) for k in dims},
-        "traits": final_traits, # 带描述的列表
-        "relationships": [
-            {"name": "神秘恩人", "desc": "开局给你留了一笔启动资金", "val": 60},
-            {"name": "宿命之敌", "desc": "你们终将有一战", "val": -30}
-        ]
+        "polished_bio": f"【系统档案】\n{name}，{age}岁。\n{bio}\n(系统评价：此子入局，必将掀起一番风浪...)",
+        "stats": stats,
+        "traits": traits,
+        "npcs": npcs
     }
 
 # ==========================================
-# 3. 页面逻辑
+# 3. 状态管理与工具函数
 # ==========================================
 if 'page' not in st.session_state: st.session_state.page = 'home'
-if 'user_input_name' not in st.session_state: st.session_state.user_input_name = ""
-if 'user_input_bio' not in st.session_state: st.session_state.user_input_bio = ""
+if 'presets' not in st.session_state: st.session_state.presets = []
 
-# --- 侧边栏 ---
-with st.sidebar:
-    st.markdown("### 🧬 神经连接")
-    with st.expander("API 配置", expanded=True):
-        st.text_input("Server URL", value="https://api.openai.com/v1")
-        st.text_input("Secret Key", type="password")
-        st.caption("未连接将启用【虚空模拟】模式")
-    
-    if st.session_state.get('character'):
-        c = st.session_state.character
-        st.markdown("---")
-        st.markdown(f"### 🟢 {c['name']}")
-        st.write(f"生命: {c['hp']} | 精力: {c['energy']}")
-        st.progress(c['hp']/100)
-        
-        st.markdown("#### 命运羁绊")
-        for r in c['data']['relationships']:
-            st.info(f"{r['name']}: {r['val']} ({r['desc']})")
+def navigate_to(page):
+    st.session_state.page = page
+    st.rerun()
 
-# --- 首页 ---
+# ==========================================
+# 4. 页面渲染逻辑
+# ==========================================
+
+# --- 首页：剧本选择 ---
 if st.session_state.page == 'home':
-    st.markdown("# 🪐 AI INFINITE SIMULATOR")
-    st.markdown("### 选择你的命运位面")
+    # 顶部 Title
+    st.markdown("<h1>AI INFINITE SIMULATOR</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='margin-bottom: 40px;'>v3.0.1 | 沉浸式模拟引擎 | 深度角色构建</p>", unsafe_allow_html=True)
     
-    tabs = st.tabs(["🏛️ 三国", "🏙️ 现代", "⚔️ 修仙", "☢️ 末日", "✨ 自定义"])
+    # API 状态栏 (更隐蔽美观)
+    with st.expander("🔌 神经漫游网络配置 (API Settings)"):
+        c1, c2 = st.columns([3, 1])
+        c1.text_input("Gateway Address", value="https://api.openai.com/v1")
+        c2.text_input("Access Key", type="password")
+
+    # 剧本 Tabs
+    tabs = st.tabs(["🏛️ 三国乱世", "🏙️ 现代都市", "⚔️ 问道修仙", "☢️ 末日废土", "✨ 虚空创世"])
     
-    def render_cards(type_key):
-        for s in SCENARIOS[type_key]:
-            # 使用 HTML 渲染精美卡片 + Streamlit 按钮交互
-            st.markdown(f"""
-            <div class="glass-card">
-                <h3>{s['name']}</h3>
-                <p style="opacity: 0.8; font-size: 0.95rem;">{s['desc']}</p>
-            </div>
-            """, unsafe_allow_html=True)
-            if st.button(f"进入位面 >", key=s['id']):
-                st.session_state.current_scenario = {"type": type_key, "info": s}
-                st.session_state.page = 'create'
-                st.rerun()
+    def render_scenario_list(key):
+        for s in SCENARIOS[key]:
+            # 使用高密度布局
+            col_text, col_btn = st.columns([4, 1])
+            with col_text:
+                st.markdown(f"""
+                <div style="padding: 10px; border-left: 3px solid #00c6ff;">
+                    <h3 style="margin:0; color:white;">{s['name']}</h3>
+                    <p style="margin:0; font-size:0.9rem; color:#888;">{s['desc']}</p>
+                </div>
+                """, unsafe_allow_html=True)
+            with col_btn:
+                # 垂直居中按钮
+                st.write("")
+                if st.button("INIT", key=s['id'], use_container_width=True):
+                    st.session_state.current_scenario = {"type": key, "info": s}
+                    # 每次进入创建页，重新生成推荐人物
+                    st.session_state.presets = generate_dynamic_presets(key)
+                    navigate_to('create')
+            st.markdown("---")
 
-    with tabs[0]: render_cards("三国")
-    with tabs[1]: render_cards("现代")
-    with tabs[2]: render_cards("修仙")
-    with tabs[3]: render_cards("末日")
-    with tabs[4]: 
-        st.text_area("描述你心中的世界...", height=150)
-        st.button("创世 >")
+    with tabs[0]: render_scenario_list("三国")
+    with tabs[1]: render_scenario_list("现代")
+    with tabs[2]: render_scenario_list("修仙")
+    with tabs[3]: render_scenario_list("末日")
+    with tabs[4]:
+        st.info("输入一段文字，AI 将自动解析世界观并构建规则。")
+        st.text_area("世界观描述", height=100)
+        st.button("解析并生成")
 
-# --- 创建页 ---
+# --- 角色创建页 ---
 elif st.session_state.page == 'create':
     scen = st.session_state.current_scenario
-    st.markdown(f"<h1>{scen['info']['name']}</h1>", unsafe_allow_html=True)
-    st.markdown(f"<p>{scen['info']['desc']}</p>", unsafe_allow_html=True)
+    
+    # 顶部导航
+    c1, c2 = st.columns([1, 10])
+    if c1.button("⬅ 返回"): navigate_to('home')
+    c2.markdown(f"**当前载入模组：{scen['type']} > {scen['info']['name']}**")
     
     st.markdown("---")
-    
-    c1, c2 = st.columns([1, 1])
-    
-    with c1:
-        st.markdown("### 💠 选择宿主 (推荐)")
-        # 网格化布局推荐人物
-        presets = PRESETS.get(scen['type'], [])
-        # 每行2个
-        for i in range(0, len(presets), 2):
-            cols = st.columns(2)
-            for j in range(2):
-                if i+j < len(presets):
-                    p = presets[i+j]
-                    with cols[j]:
-                        if st.button(f"{p['name']}\n[{p['style']}]", key=f"pre_{p['name']}"):
-                            st.session_state.user_input_name = p['name']
-                            st.session_state.user_input_bio = p['bio']
-                            st.rerun()
 
-    with c2:
-        st.markdown("### 📝 塑造金身")
-        with st.form("c_form"):
-            name = st.text_input("姓名", value=st.session_state.user_input_name)
-            age = st.slider("骨龄", 10, 100, 20)
-            bio = st.text_area("生平/背景", value=st.session_state.user_input_bio, height=120)
+    col_left, col_right = st.columns([1.5, 2])
+    
+    # 左侧：动态推荐系统
+    with col_left:
+        st.markdown("<div class='hud-title'>⚡ 快速身份 (AI 生成)</div>", unsafe_allow_html=True)
+        
+        # 5个推荐人物，使用紧凑型 Grid
+        for i, p in enumerate(st.session_state.presets):
+            # 模拟卡片按钮
+            if st.button(f"{p['name']} | {p['role']}\n{p['bio'][:15]}...", key=f"pre_{i}", use_container_width=True):
+                st.session_state.user_input_name = p['name']
+                st.session_state.user_input_bio = p['bio']
+                st.rerun()
+                
+        if st.button("🔄 刷新随机库"):
+            st.session_state.presets = generate_dynamic_presets(scen['type'])
+            st.rerun()
+
+    # 右侧：详细定制
+    with col_right:
+        st.markdown("<div class='hud-title'>📝 深度定制</div>", unsafe_allow_html=True)
+        with st.form("char_create"):
+            name = st.text_input("姓名", value=st.session_state.get('user_input_name', ''))
+            age = st.slider("骨龄/年龄", 14, 80, 20)
+            bio = st.text_area("人物背景 (越详细生成越精准)", value=st.session_state.get('user_input_bio', ''), height=150)
             
-            if st.form_submit_button("⚡ 注入灵魂"):
-                with st.spinner("正在推演天机..."):
+            st.markdown("<br>", unsafe_allow_html=True)
+            submit = st.form_submit_button("🚀 启动模拟 (GENERATE)", use_container_width=True)
+            
+            if submit and name and bio:
+                with st.spinner("AI 正在构建神经网络..."):
                     res = mock_ai_generator(name, age, bio, scen['type'])
                     st.session_state.character = {
-                        "name": name, "hp": 100, "energy": 5, "luck": 88,
+                        "name": name, "age": age,
+                        "hp": 100, "energy": 5, "luck": random.randint(1,100),
                         "data": res
                     }
-                    st.session_state.page = 'preview'
-                    st.rerun()
+                    navigate_to('preview')
 
-# --- 预览页 ---
+# --- 角色预览与确认页 (核心信息面板) ---
 elif st.session_state.page == 'preview':
     c = st.session_state.character
     d = c['data']
     
-    st.markdown("<h1>角色已生成</h1>", unsafe_allow_html=True)
+    # 顶部导航
+    c1, c2 = st.columns([1, 10])
+    if c1.button("⬅ 重塑"): navigate_to('create')
+    c2.markdown(f"**身份确认阶段**")
+
+    # 布局： 2:1:1
+    col_bio, col_stats, col_social = st.columns([2, 1.5, 1.5])
     
-    col1, col2 = st.columns([1, 1.5])
-    
-    with col1:
-        st.markdown(f"""
-        <div class="glass-card">
-            <h2>{c['name']}</h2>
-            <p>{d['polished_bio']}</p>
-        </div>
-        """, unsafe_allow_html=True)
+    # 1. 左侧：档案卡
+    with col_bio:
+        st.markdown("<div class='hud-card'>", unsafe_allow_html=True)
+        st.markdown(f"<h2 style='color:#00c6ff; margin:0;'>{c['name']}</h2>", unsafe_allow_html=True)
+        st.markdown(f"<p style='color:#888;'>年龄: {c['age']} | 幸运: {c['luck']}</p>", unsafe_allow_html=True)
+        st.markdown("<hr style='border-color:#333;'>", unsafe_allow_html=True)
+        st.markdown(f"<p style='line-height:1.6;'>{d['polished_bio']}</p>", unsafe_allow_html=True)
         
-        st.markdown("### 天赋特质 (鼠标悬停查看)")
-        # 生成带 Tooltip 的标签
-        tags_html = ""
+        st.markdown("<div class='hud-title' style='margin-top:20px;'>🧬 固有特质</div>", unsafe_allow_html=True)
+        # 特质显示
         for t in d['traits']:
-            tags_html += f"<span class='trait-badge' data-desc='{t['desc']}'>{t['name']}</span>"
-        st.markdown(f"<div class='glass-card'>{tags_html}</div>", unsafe_allow_html=True)
+            st.markdown(f"<span class='trait-box' title='{t['desc']}'>{t['name']}</span>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
         
-    with col2:
-        # 黑色科技风雷达图
+        # 开始按钮
+        st.button("✅ 确认并连接神经元 (START GAME)", type="primary", use_container_width=True, on_click=lambda: navigate_to('game'))
+
+    # 2. 中间：属性面板 (分离 图表 和 数值)
+    with col_stats:
+        # A. 五维图 (锁定交互，纯视觉)
+        st.markdown("<div class='hud-card'>", unsafe_allow_html=True)
+        st.markdown("<div class='hud-title'>📊 能力雷达</div>", unsafe_allow_html=True)
+        
         df = pd.DataFrame(dict(r=list(d['stats'].values()), theta=list(d['stats'].keys())))
         fig = px.line_polar(df, r='r', theta='theta', line_close=True)
         fig.update_layout(
             paper_bgcolor='rgba(0,0,0,0)',
             plot_bgcolor='rgba(0,0,0,0)',
+            dragmode=False, # 禁止拖拽
+            margin=dict(l=30, r=30, t=30, b=20), # 修复遮挡
             polar=dict(
-                bgcolor='rgba(0,0,0,0.5)',
-                radialaxis=dict(visible=True, range=[0, 100], showticklabels=False, linecolor='#555'),
-                angularaxis=dict(linecolor='#555', color='#fff', tickfont=dict(size=14))
-            ),
-            margin=dict(l=40, r=40, t=20, b=20)
+                bgcolor='rgba(0,0,0,0.3)',
+                radialaxis=dict(visible=False, range=[0, 100]), # 隐藏轴数字
+                angularaxis=dict(linecolor='#444', color='#00c6ff')
+            )
         )
-        fig.update_traces(fill='toself', line_color='#00c6ff', fillcolor='rgba(0, 198, 255, 0.4)')
-        st.plotly_chart(fig, use_container_width=True)
-    
-    b1, b2 = st.columns(2)
-    if b1.button("⬅️ 重新投胎"):
-        st.session_state.page = 'create'
-        st.rerun()
-    if b2.button("🚀 开启人生"):
-        st.session_state.page = 'game'
-        st.rerun()
+        fig.update_traces(fill='toself', line_color='#00c6ff', fillcolor='rgba(0, 198, 255, 0.2)')
+        # 关键：禁用 Plotly 工具栏
+        st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False, 'staticPlot': True})
+        st.markdown("</div>", unsafe_allow_html=True)
+        
+        # B. 详细数值列表
+        st.markdown("<div class='hud-card'>", unsafe_allow_html=True)
+        st.markdown("<div class='hud-title'>🔢 详细参数</div>", unsafe_allow_html=True)
+        for k, v in d['stats'].items():
+            st.markdown(f"""
+            <div style="display:flex; justify-content:space-between; border-bottom:1px solid #333; padding:5px 0;">
+                <span style="color:#aaa;">{k}</span>
+                <span style="color:#fff; font-weight:bold; font-family:monospace;">{v}</span>
+            </div>
+            """, unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
-# --- 游戏页 ---
+    # 3. 右侧：社会关系 (羁绊)
+    with col_social:
+        st.markdown("<div class='hud-card'>", unsafe_allow_html=True)
+        st.markdown("<div class='hud-title'>🕸️ 初始人际网</div>", unsafe_allow_html=True)
+        
+        for npc in d['npcs']:
+            # 颜色逻辑：正数为绿，负数为红
+            color = "#00ff00" if npc['rel'] > 0 else "#ff0000"
+            st.markdown(f"""
+            <div style="margin-bottom:15px; background:rgba(0,0,0,0.2); padding:10px; border-left:3px solid {color};">
+                <div style="font-weight:bold; color:#fff;">{npc['name']} <span style="font-size:0.8rem; color:#888;">({npc['role']})</span></div>
+                <div style="font-size:0.8rem; color:#aaa; margin-top:3px;">"{npc['desc']}"</div>
+                <div style="margin-top:5px; height:4px; background:#333; width:100%;">
+                    <div style="height:100%; width:{abs(npc['rel'])}%; background:{color};"></div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        st.markdown("</div>", unsafe_allow_html=True)
+        
+        # 资源栏
+        st.markdown("<div class='hud-card'>", unsafe_allow_html=True)
+        st.markdown("<div class='hud-title'>📦 携带物资</div>", unsafe_allow_html=True)
+        st.markdown("<ul><li>新手礼包 x1</li><li>身份铭牌 x1</li></ul>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+# --- 游戏主界面 (预留) ---
 elif st.session_state.page == 'game':
-    st.markdown("<h1>游戏正式开始...</h1>", unsafe_allow_html=True)
-    st.info("界面 UI 重构完毕。下一步将接入 AI 动态剧情生成逻辑。")
+    # 顶部导航
+    c1, c2 = st.columns([1, 10])
+    if c1.button("🛑 退出"): navigate_to('home')
+    c2.markdown(f"**Day 1** | {st.session_state.current_scenario['info']['name']}")
+    
+    st.success("UI 架构重构完成。所有已知 UI/UX 痛点已修复。准备接入下一步的 GPT 剧情逻辑。")
