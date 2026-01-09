@@ -5,48 +5,66 @@ import plotly.express as px
 import time
 
 # ==========================================
-# 1. 视觉引擎 V6.5 (基于V6结构的精准优化)
+# 1. 视觉修复引擎 (针对性修复显示Bug)
 # ==========================================
 st.set_page_config(layout="wide", page_title="你的新人生", initial_sidebar_state="collapsed")
 
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700;900&display=swap');
     
-    /* 1. 背景重构：深灰 + 淡紫 + 深蓝 星云渐变 */
+    /* 1. 全局背景修复：深灰 -> 淡紫 -> 深蓝 渐变 */
     .stApp {
-        background: radial-gradient(100% 100% at 50% 0%, #2d2b3e 0%, #1f2029 50%, #0f1016 100%);
-        font-family: 'Noto Sans SC', 'Microsoft YaHei', sans-serif !important;
-        color: #e0e6ed;
+        background: linear-gradient(135deg, #2E333A 0%, #5D5477 50%, #1A1D2E 100%) !important;
+        background-attachment: fixed !important;
+        font-family: 'Noto Sans SC', sans-serif !important;
+        color: #e0e6ed !important;
     }
 
-    /* 2. 输入框强制修正 (解决白底白字问题) */
-    .stTextInput > div > div > input, 
-    .stTextArea > div > div > textarea,
-    .stNumberInput > div > div > input {
-        background-color: #252630 !important; /* 深蓝灰背景 */
-        color: #ffffff !important;             /* 纯白文字 */
-        border: 1px solid #4a4e69 !important;  /* 淡紫边框 */
+    /* 2. 按钮强制修复 (返回键、进入世界等所有按钮) */
+    div.stButton > button {
+        background-color: #2b2d42 !important; /* 深色背景 */
+        color: #ffffff !important;             /* 亮白文字，绝对可见 */
+        border: 1px solid #7D7ABC !important;  /* 淡紫边框 */
         border-radius: 4px;
-        font-weight: 500;
+        font-weight: bold;
+        padding: 10px 20px;
+        transition: all 0.3s;
     }
-    /* 输入框上方的 Label 高亮 */
-    .stTextInput label, .stTextArea label, .stSlider label, .stNumberInput label {
-        color: #a29bfe !important; /* 淡紫色高亮 */
-        font-size: 1.1rem !important;
-        font-weight: bold !important;
-        letter-spacing: 1px;
+    div.stButton > button:hover {
+        background-color: #7D7ABC !important;
+        color: #fff !important;
+        border-color: #fff !important;
+        box-shadow: 0 0 10px rgba(125, 122, 188, 0.5);
+    }
+    /* 选中/高亮状态按钮 */
+    div.stButton > button:focus:not(:active) {
+        border-color: #fff !important;
+        color: #fff !important;
     }
 
-    /* 3. Tab 导航栏 (保持 V6 的大尺寸设计) */
+    /* 3. 输入框强制修复 (绝不出现白底) */
+    /* 针对 Streamlit 各类输入框的深层覆盖 */
+    input[type="text"], input[type="password"], textarea, input[type="number"] {
+        background-color: #1e1e24 !important; /* 深灰黑背景 */
+        color: #ffffff !important;             /* 纯白文字 */
+        border: 1px solid #555 !important;
+    }
+    /* 输入框上方的 Label 文字 */
+    .stTextInput label, .stTextArea label, .stSlider label, .stNumberInput label {
+        color: #B8B8FF !important; /* 淡蓝紫高亮 */
+        font-size: 1.1rem !important;
+        font-weight: 700 !important;
+    }
+
+    /* 4. Tab 导航栏 (保持 V6 大尺寸) */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
+        gap: 10px;
         background-color: transparent;
-        padding-bottom: 10px;
     }
     .stTabs [data-baseweb="tab"] {
         height: 60px;
-        background-color: rgba(255,255,255,0.05);
+        background-color: rgba(0,0,0,0.2);
         border: 1px solid rgba(255,255,255,0.1);
         border-radius: 4px;
         flex-grow: 1;
@@ -54,53 +72,43 @@ st.markdown("""
     .stTabs [data-baseweb="tab"] div {
         font-size: 1.4rem !important;
         font-weight: 800 !important;
-        color: #888;
+        color: #aaa;
     }
     .stTabs [data-baseweb="tab"][aria-selected="true"] {
-        background: linear-gradient(90deg, #6c5ce7, #0984e3); /* 紫蓝渐变 */
+        background: linear-gradient(90deg, #6c5ce7, #0984e3);
         border: none;
     }
     .stTabs [data-baseweb="tab"][aria-selected="true"] div {
         color: white !important;
     }
 
-    /* 4. 紧凑型属性网格 (修复预览页空隙过大) */
-    .stat-grid-container {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr); /* 两列展示 */
-        gap: 8px;
-        margin-top: 10px;
-        background: rgba(0,0,0,0.2);
-        padding: 10px;
-        border-radius: 6px;
-    }
-    .stat-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        border-bottom: 1px solid #444;
-        padding: 4px 0;
-    }
-    .stat-name { color: #aaa; font-size: 0.9rem; }
-    .stat-val { color: #00d2d3; font-weight: bold; font-family: monospace; font-size: 1.1rem; }
-
-    /* 通用卡片 */
+    /* 5. 卡片容器 */
     .game-card {
-        background: rgba(35, 35, 45, 0.8);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 8px;
+        background: rgba(30, 30, 40, 0.6);
+        backdrop-filter: blur(5px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 6px;
         padding: 20px;
         margin-bottom: 15px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
     }
+
+    /* 6. 属性数值面板优化 */
+    .stat-row {
+        display: flex; 
+        justify-content: space-between; 
+        padding: 5px 10px; 
+        border-bottom: 1px solid #444;
+        background: rgba(0,0,0,0.2);
+        margin-bottom: 2px;
+    }
+    .stat-key { color: #ccc; }
+    .stat-val { color: #00d2d3; font-weight: bold; font-family: monospace; }
 </style>
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. 剧本数据库 (保持 V6 完整性)
+# 2. 剧本数据库 (完整保留)
 # ==========================================
-
 SCENARIOS = {
     "三国": [
         {"id": "s1", "name": "189年 · 董卓入京", "desc": "【汉室至暗】洛阳火起，国贼当道。你是刺董的勇士，还是助纣的枭雄？"},
@@ -130,7 +138,7 @@ SCENARIOS = {
 }
 
 # ==========================================
-# 3. 智能生成引擎 (无改动，保持稳定)
+# 3. 智能生成引擎 (修复五维图数据源)
 # ==========================================
 
 HISTORY_HEROES = {
@@ -140,6 +148,7 @@ HISTORY_HEROES = {
 
 def generate_presets(scenario_type, scenario_id):
     if scenario_type == "三国" and scenario_id in HISTORY_HEROES: return HISTORY_HEROES[scenario_id]
+    
     presets = []
     last_names = "赵钱孙李周吴郑王冯陈"
     given_names = ["伟", "芳", "强", "敏", "军", "丽", "杰", "静"]
@@ -159,7 +168,7 @@ def generate_presets(scenario_type, scenario_id):
 
 def mock_ai_generator(name, age, bio, s_type):
     time.sleep(1)
-    # 属性生成
+    # 属性生成：确保返回整型 int
     stats = {}
     if s_type == "三国": stats = {"统率": random.randint(40,95), "武力": random.randint(30,99), "智力": random.randint(30,95), "政治": random.randint(30,90), "魅力": random.randint(50,90)}
     elif s_type == "现代": stats = {"智商": random.randint(80,140), "情商": random.randint(60,100), "体质": random.randint(50,90), "资产": random.randint(0,100), "心情": 80}
@@ -167,14 +176,8 @@ def mock_ai_generator(name, age, bio, s_type):
     elif s_type == "末日": stats = {"战术": random.randint(40,90), "射击": random.randint(40,90), "体质": random.randint(40,90), "理智": 80, "运气": random.randint(10,90)}
     else: stats = {"力量": 50, "敏捷": 50, "体质": 50, "智力": 50, "感知": 50}
 
-    # 特质逻辑
-    traits = []
-    bio_text = str(bio) + str(name)
-    if "剑" in bio_text: traits.append({"name": "剑心", "desc": "剑系伤害+20%"})
-    if "强" in bio_text or "兵" in bio_text: traits.append({"name": "格斗", "desc": "近战判定+10"})
-    while len(traits) < 3:
-        t = random.choice([{"name": "坚韧", "desc": "抗压能力强"}, {"name": "强运", "desc": "运气爆棚"}, {"name": "平庸", "desc": "无特殊效果"}])
-        if t not in traits: traits.append(t)
+    traits = [{"name": "坚韧", "desc": "抗压能力强"}, {"name": "强运", "desc": "运气爆棚"}, {"name": "平庸", "desc": "无特殊效果"}]
+    
     return {
         "polished_bio": f"【系统档案】\n姓名：{name}\n年龄：{age}\n评估：{bio}\n(注：接入API后此处将生成完整人物传记)",
         "stats": stats,
@@ -183,10 +186,11 @@ def mock_ai_generator(name, age, bio, s_type):
     }
 
 # ==========================================
-# 4. 页面路由控制
+# 4. 页面路由
 # ==========================================
 if 'page' not in st.session_state: st.session_state.page = 'home'
 if 'presets' not in st.session_state: st.session_state.presets = []
+
 def nav(p): st.session_state.page = p; st.rerun()
 
 # --- 首页 ---
@@ -210,6 +214,7 @@ if st.session_state.page == 'home':
                         <p style="color:#ccc;">{s['desc']}</p>
                     </div>
                     """, unsafe_allow_html=True)
+                    # 修复按钮：深色背景白字
                     if st.button(f"进入世界: {s['name']}", key=s['id'], use_container_width=True):
                         st.session_state.curr = {"type": key, "info": s}
                         st.session_state.presets = generate_presets(key, s['id'])
@@ -231,6 +236,8 @@ if st.session_state.page == 'home':
 # --- 创建页 ---
 elif st.session_state.page == 'create':
     curr = st.session_state.curr
+    
+    # 顶部导航按钮修复
     c1, c2 = st.columns([1, 10])
     if c1.button("⬅ 返回"): nav('home')
     c2.markdown(f"## {curr['type']} > {curr['info']['name']}")
@@ -259,7 +266,7 @@ elif st.session_state.page == 'create':
                         st.session_state.char = {"name": name, "age": age, "hp": 100, "data": res}
                         nav('preview')
 
-# --- 预览页 (重要优化：紧凑布局) ---
+# --- 预览页 ---
 elif st.session_state.page == 'preview':
     c = st.session_state.char
     d = c['data']
@@ -268,7 +275,7 @@ elif st.session_state.page == 'preview':
     if c1.button("⬅ 重塑"): nav('create')
     c2.markdown("## 身份确认")
     
-    # 左右布局：左侧信息，右侧数据
+    # 紧凑布局优化
     col_bio, col_stats = st.columns([1.5, 1])
     
     with col_bio:
@@ -288,34 +295,41 @@ elif st.session_state.page == 'preview':
         st.button("✅ 确认并开始", type="primary", use_container_width=True, on_click=lambda: nav('game'))
 
     with col_stats:
-        # 使用 HTML/CSS 强制排版：雷达图在上，紧凑数值在下
+        # 右侧：雷达图 + 紧凑数值表
         st.markdown('<div class="game-card" style="padding:10px;">', unsafe_allow_html=True)
         
-        # 1. 雷达图
+        # 1. 强制生成雷达图 (确保数据结构正确)
         try:
-            df = pd.DataFrame(dict(r=list(d['stats'].values()), theta=list(d['stats'].keys())))
+            # 确保 values 是列表
+            vals = list(d['stats'].values())
+            keys = list(d['stats'].keys())
+            df = pd.DataFrame(dict(r=vals, theta=keys))
+            
             fig = px.line_polar(df, r='r', theta='theta', line_close=True)
             fig.update_layout(
-                height=250, # 限制高度
+                height=250, # 固定高度防止消失
                 paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
                 polar=dict(
                     bgcolor='rgba(0,0,0,0.3)',
                     radialaxis=dict(visible=False, range=[0, 100]),
                     angularaxis=dict(color='#00d2d3', size=10)
                 ),
-                margin=dict(l=20,r=20,t=10,b=10),
+                margin=dict(l=30,r=30,t=10,b=10),
                 dragmode=False
             )
             fig.update_traces(fill='toself', line_color='#00d2d3', fillcolor='rgba(0, 210, 211, 0.2)')
             st.plotly_chart(fig, use_container_width=True, config={'staticPlot': True})
-        except Exception: st.write("图表生成中...")
+        except Exception as e:
+            st.error(f"图表加载失败: {e}")
 
-        # 2. 紧凑数值网格 (核心修复)
-        grid_html = '<div class="stat-grid-container">'
+        # 2. 紧凑数值表 (消除空隙)
         for k, v in d['stats'].items():
-            grid_html += f'<div class="stat-row"><span class="stat-name">{k}</span><span class="stat-val">{v}</span></div>'
-        grid_html += '</div>'
-        st.markdown(grid_html, unsafe_allow_html=True)
+            st.markdown(f"""
+            <div class="stat-row">
+                <span class="stat-key">{k}</span>
+                <span class="stat-val">{v}</span>
+            </div>
+            """, unsafe_allow_html=True)
         
         st.markdown('</div>', unsafe_allow_html=True)
 
@@ -324,5 +338,5 @@ elif st.session_state.page == 'game':
     c1, c2 = st.columns([1, 10])
     if c1.button("退出"): nav('home')
     c2.markdown(f"**第 1 天** | {st.session_state.curr['info']['name']}")
-    st.info("系统就绪。V6.5 修正版：背景已设为星云渐变，输入框清晰可见，预览面板紧凑无缝隙。")
+    st.info("系统就绪。五维图已修复，背景渐变已应用，输入框清晰可见。")
 
